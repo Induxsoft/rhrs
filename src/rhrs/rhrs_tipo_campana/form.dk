@@ -1,0 +1,56 @@
+#include "dkli.dkh"
+#!
+module "form.dk"
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "../_lib/config.dk"
+    #include "../_lib/icons.dk"
+
+    do @context.begin(@crud_context)
+    
+    ref entity = ifnull(@("&."),record.create())
+
+    isNew = (@("$parameters/_entity_id") == "_new")
+
+    #$
+    div(class="container")
+    {
+        form(action="." method="POST")
+        {
+            div(id="main_bar" class="row container-section my-2 px-0 py-2 border-bottom")
+            {
+                div(class="col-4 d-flex align-items-center p-0")
+                {
+                    h5(class="tex-no-break m-0"){$"#<ifstr(isNew,'Agregar','Editar')> tipo de campaña"}
+                }
+                div(class="col-8 d-flex align-items-center justify-content-end p-0 gap-2" id="main_bar_controls")
+                {
+                    a(href="./" class="btn btn-sm border-secondary induxsoft-corners btn-main-action"){$"#<@ICON_ARROW_CLOCKWISE>"}
+                    button(type="submit" class="btn btn-sm border-secondary induxsoft-corners btn-main-action"){$"#<@ICON_SAVE>"}
+                    a(href="#<@RH_CAMPANIA_TIPO>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action"){$"#<@ICON_X_LG>"}
+                }
+            }
+
+            div(id="work_area" class="container-section")
+            {
+                input(type="hidden" name="sys_recver" value="#<@@(entity,'#sys_recver')>")
+                div(class="#<ifstr(@('$error/message')!='','alert alert-danger','')>"){$"#<@('$error/message')>"}
+
+                div(class="row")
+                {
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_codigo"){$"Código"}
+                        input(class="form-control rounded-0" type="text" name="codigo" value="#<@@(entity,'$codigo')>" id="txt_codigo" maxlenght="50" required="")
+                    }
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_descripcion"){$"Descripción"}
+                        input(class="form-control rounded-0" type="text" name="descripcion" value="#<@@(entity,'$descripcion')>" id="txt_descripcion" maxlenght="50" required="")
+                    }
+                }
+            }
+        }
+    }
+}

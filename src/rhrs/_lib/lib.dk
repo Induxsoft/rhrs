@@ -1,0 +1,53 @@
+#include "dkli.dkh"
+#!
+module "lib.dk"
+{
+    function form(name,type,&obj)
+    {
+        name = trim(str(name))
+        if isnull(obj) { new obj {} }
+
+        switch str(type)
+        {
+            case "tx"
+            {
+                text = trim(@("$./form/"+name))
+                if text == "" { text = trim(@("$input/"+name)) }
+                if text == "" { text = trim(@@(obj,"$"+name)) }
+                return text
+            }
+            case "nm"
+            {
+                value = @("#./form/"+name)
+                if value <= 0 { value = @("#input/"+name) }
+                if value <= 0 { value = @@(obj,"#"+name) }
+                return value
+            }
+            case "ch"
+            {
+                bool = trim(@("$./form/"+name))
+                if bool == "" { bool = trim(@("$input/"+name)) }
+                if bool == "" { bool = trim(@@(obj,"$"+name)) }
+                
+                return ifstr(parse.bool(bool),"checked","")
+            }
+            case "rd"
+            {
+                bool = trim(@("$./form/"+name))
+                if bool == "" { bool = trim(@("$input/"+name)) }
+                if bool == "" { bool = trim(@@(obj,"$"+name)) }
+                
+                return ifstr(parse.bool(bool),"checked","")
+            }
+            case "dt"
+            {
+                fecha = trim(@("$./form/"+name))
+                if fecha == "" { fecha = trim(@("$input/"+name)) }
+                if fecha == "" { fecha = trim(@@(obj,"$"+name)) }
+                if fecha == "" { fecha = date_str(now(),"yyyy-MM-dd") }
+                return fecha
+            }
+            default { return "" }
+        }
+    }
+}

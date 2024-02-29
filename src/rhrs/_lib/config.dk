@@ -1,0 +1,7 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    @RH_CAMPANIA = "/!/rhrs/campania/"
+    @RH_CAMPANIA_TIPO = "/!/rhrs/campania_tipo/"
+}

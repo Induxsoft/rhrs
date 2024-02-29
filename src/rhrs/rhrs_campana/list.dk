@@ -1,0 +1,66 @@
+#include "dkli.dkh"
+#!
+module "list.dk"
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "uielements.v12.dkl"
+    #include "../_lib/config.dk"
+
+    do @context.begin(@crud_context)
+
+    form_bar_buttons::
+    {
+        _btn_cls = "btn btn-sm border-secondary induxsoft-corners btn-main-action no-print"
+        #$
+        a(href="./_new/" class="#<_btn_cls>"){$"Agregar"}
+        a(href="#<@RH_CAMPANIA_TIPO>" class="#<_btn_cls>"){$"Tipos de campaña"}
+        #!
+    }
+    point form_bar_buttons to form_bar_buttons
+
+    new v12_form_bar_cfg
+    {
+        @"title": "Campaña"
+        @"buttons*": form_bar_buttons
+        @"urlexit": "/"
+    }
+
+    _actions_btn_cls = "cursor:pointer; text-decoration:none; padding: 0px 8px; background-color:#F5F5F5; color:#000;"
+
+    new table_definition
+    {
+        @"datatable*": ifnull(@("&."),list.create())
+        @"value_field":"sys_pk"
+        member @"columns"
+        {
+            member @"codigo" { @"caption": "Código" }
+            member @"nombre" { @"caption": "Código" }
+            member @"descripcion" { @"caption": "Descripción" }
+            member @"fecha_ini" { @"caption": "Inicio" }
+            member @"fecha_fin" { @"caption": "Fin" }
+            
+            member @"_actions"
+            {
+                @"caption": "Acciones"
+                @"no-print": @true
+                @"template": ftext('
+                    <div class="no-print" style="display:flex;justify-content:center;align-items:center;gap:6px;">
+                        <a href="./${DataRow.sys_pk}/" style="#<_actions_btn_cls>">Editar</a>
+                        <a href="#" onclick="InduxsoftCrudlModel.Delete(${DataRow.sys_pk})" style="#<_actions_btn_cls>">Eliminar</a>
+                    </div>
+                ')
+            }
+        }
+    }
+
+    #$
+    div(class="container-fluid")
+    {
+        #! do uie.printV12FormBar(v12_form_bar_cfg)
+        #$ div(class="container-section mt-1 p-2 pt-0" id="work_area")
+        {
+           #! do uie.dbeditable(table_definition,"tbl_campania") 
+        }
+    }
+}

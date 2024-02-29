@@ -1,0 +1,96 @@
+#include "dkli.dkh"
+#!
+module "form.dk"
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "uielements.dkl"
+    #include "../_lib/config.dk"
+    #include "../_lib/icons.dk"
+    #include "../_lib/lib.dk"
+
+    do @context.begin(@crud_context)
+    
+    ref entity = ifnull(@("&./entity"),record.create())
+    ref list_tipos_campania = ifnull(@("&./tipos_campania"),list.create())
+
+    isNew = (@("$parameters/_entity_id") == "_new")
+
+    new sel_tipo_campania
+    {
+        @"datatable*": list_tipos_campania
+        @"id": "sel_tipo_campania"
+        new member @"attributes"
+        {
+            @"class": "form-select rounded-0"
+            @"name": "ref_tipo_campana"
+            @"required": ""
+        }
+        @"value_field": "sys_pk"
+        @"text_field": "text"
+        @"selectted": form("ref_tipo_campana","nm",entity)
+    }
+
+    #$
+    div(class="container")
+    {
+        form(action="." method="POST")
+        {
+            div(id="main_bar" class="row container-section my-2 px-0 py-2 border-bottom")
+            {
+                div(class="col-4 d-flex align-items-center p-0")
+                {
+                    h5(class="tex-no-break m-0"){$"#<ifstr(isNew,'Agregar','Editar')> campaña"}
+                }
+                div(class="col-8 d-flex align-items-center justify-content-end p-0 gap-2" id="main_bar_controls")
+                {
+                    a(href="./" class="btn btn-sm border-secondary induxsoft-corners btn-main-action"){$"#<@ICON_ARROW_CLOCKWISE>"}
+                    button(type="submit" class="btn btn-sm border-secondary induxsoft-corners btn-main-action"){$"#<@ICON_SAVE>"}
+                    a(href="#<@RH_CAMPANIA>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action"){$"#<@ICON_X_LG>"}
+                }
+            }
+
+            div(id="work_area" class="container-section")
+            {
+                input(type="hidden" name="sys_recver" value="#<@@(entity,'#sys_recver')>")
+                div(class="#<ifstr(@('$error/message')!='','alert alert-danger','')>"){$"#<@('$error/message')>"}
+
+                div(class="row")
+                {
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_codigo"){$"Código:"}
+                        input(class="form-control rounded-0" type="text" name="codigo" value="#<form('codigo','tx',entity)>" id="txt_codigo" maxlenght="50" required="")
+                    }
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_nombre"){$"Nombre:"}
+                        input(class="form-control rounded-0" type="text" name="nombre" value="#<form('nombre','tx',entity)>" id="txt_nombre" maxlenght="50" required="")
+                    }
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_descripcion"){$"Descripción:"}
+                        input(class="form-control rounded-0" type="text" name="descripcion" value="#<form('descripcion','tx',entity)>" id="txt_descripcion" maxlenght="50")
+                    }
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_fecha_ini"){$"Fecha Inicio:"}
+                        input(class="form-control rounded-0" type="date" name="fecha_ini" value="#<form('fecha_ini','dt',entity)>" id="txt_fecha_ini" required="")
+                    }
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="txt_fecha_fin"){$"Fecha Fin:"}
+                        input(class="form-control rounded-0" type="date" name="fecha_fin" value="#<form('fecha_fin','dt',entity)>" id="txt_fecha_fin" required="")
+                    }
+                    div(class="col-lg-6 col-md-6 col-sm-6")
+                    {
+                        label(class="form-label" "for"="sel_tipo_campania"){$"Tipo de campaña:"}
+                        ##
+                        do uie.dbSelect(sel_tipo_campania)
+                        ##
+                    }
+                }
+            }
+        }
+    }
+}

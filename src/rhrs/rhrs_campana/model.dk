@@ -1,0 +1,102 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    @read_query = "
+    SELECT
+        sys_pk,
+        sys_recver,
+        codigo,
+        nombre,
+        IFNULL(descripcion,'') descripcion,
+        IFNULL(DATE_FORMAT(fecha_ini,'%Y-%m-%d'),'') fecha_ini,
+        IFNULL(DATE_FORMAT(fecha_fin,'%Y-%m-%d'),'') fecha_fin,
+        ref_tipo_campana
+    FROM #<@table_name>
+    WHERE #<@keyfield> = @_entity_id
+    "
+    @list_query = "
+    SELECT
+        sys_pk,
+        codigo,
+        nombre,
+        IFNULL(descripcion,'') descripcion,
+        IFNULL(DATE_FORMAT(fecha_ini,'%Y-%m-%d'),'') fecha_ini,
+        IFNULL(DATE_FORMAT(fecha_fin,'%Y-%m-%d'),'') fecha_fin
+    FROM #<@table_name>
+    WHERE NOT IFNULL(sys_deleted,0)
+    "
+
+    prepareView::&db,&params,&data
+    {
+        sql_tipos_campania = "SELECT sys_pk, CONCAT(codigo, '-',descripcion) AS `text` FROM rhrs_tipo_campana"
+
+        data<"tipos_campania*"> : dbr.list(db,sql_tipos_campania,@null)
+
+        return data
+    }
+
+    read::&db,&params
+    {
+        new data
+        {
+            @"entity*": entity.read(db,params)
+        }
+        do prepareView(db,params,data)
+        return data
+    }
+
+    blank::&db,&params
+    {
+        new data {}
+        do prepareView(db,params,data)
+        return data
+    }
+
+    create::&db,&params,&data
+    {
+        ref entity = entity.create(db,params,data)
+        return entity
+
+        exception
+        {
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+
+            ref formData = record.copy(data,"*")
+            code = last_error_code()
+            error = last_error()
+
+            do record.clear(data)
+            data<"form*"> : formData
+            
+            do prepareView(db,params,data)
+            do rise_error(code,error)
+        }
+    }
+
+    update::&db,&params,&data
+    {
+        ref entity = entity.update(db,params,data)
+        return entity
+
+        exception
+        {
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+
+            ref formData = record.copy(data,"*")
+            code = last_error_code()
+            error = last_error()
+
+            do record.clear(data)
+            data<"form*"> : formData
+            
+            do prepareView(db,params,data)
+            do rise_error(code,error)
+        }
+    }
+
+    point @read to read
+    point @blank to blank
+    point @create to create
+    point @update to update
+}

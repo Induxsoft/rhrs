@@ -1,0 +1,21 @@
+#include "ddm.dkh"
+model "rhrs"
+{
+    #include "induxsoft.abstracts.ddm"
+
+    entity "rhrs_tipo_campana" : "TableModel"
+    {
+        @"codigo" string(50) unique required
+        @"descripcion" string(50) unique required
+    }
+
+    entity "rhrs_campana" : "TableModel"
+    {
+        @"codigo" string(50) unique required
+        @"descripcion" string(50) unique
+        @"nombre" string(50) unique required
+		@"fecha_ini" date required
+		@"fecha_fin" date required
+		@"ref_tipo_campana" ref: "rhrs_tipo_campana" required
+    }
+}

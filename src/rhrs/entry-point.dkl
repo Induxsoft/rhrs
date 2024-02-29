@@ -1,0 +1,79 @@
+﻿#include "dkli.dkh"
+#!
+module "Controller configs"
+{
+	#include "functions.dkh"
+	#include "serialize.dkh"
+	#include "dbr.dkh"
+	#include "dbr.vars.dkl"
+	#include "dbr.notif.dkl"
+	#include "crudl/crudl.dk"
+	#include "_lib/config.dk"
+	#include "_lib/lib.dk"
+
+	if @@(@http_context,"$session/user/ids") == "" {
+		@http_context<"response/headers/location"> : "/"
+		return
+	}
+
+	@base_path="rhrs"
+	@path_root="" // Establezca una ruta de ser necesario
+
+	//No modifique a menos que sepa lo que está haciendo
+	if not(field.exist(@@(@http_context,"&session"),"resource")) { @http_context<"session/resource*"> : record.create() }
+	if not(field.exist(@@(@http_context,"&session/resource"),"properties")) { @http_context<"session/resource/properties*"> : record.create() }
+	if not(field.exist(@@(@http_context,"&session/resource/properties"),"web_meta_tags")) { @http_context<"session/resource/properties/web_meta_tags*"> : record.create() }
+	if not(field.exist(@@(@http_context,"&session/resource/properties/web_meta_tags"),"web_page")) {@http_context<"session/resource/properties/web_meta_tags/web_page*"> : record.create() }
+	if not(field.exist(@@(@http_context,"&session/resource/properties"),"web_page")) { @http_context<"session/resource/properties/web_page*"> : record.create() }
+
+	text end_head
+	{$''}
+	
+	text start_body
+	{$''}
+	
+	text end_body
+	{$''}
+
+	@http_context<"session/resource/properties/web_meta_tags/title"> : "QA"
+	@http_context<"session/resource/properties/web_page/end_head"> : end_head
+	@http_context<"session/resource/properties/web_page/start_body"> : start_body
+	@http_context<"session/resource/properties/web_page/end_body"> : end_body
+
+	do crudl.routes.pattern("/_program/")
+	do crudl.routes.entity("/campania/","rhrs_campana")
+	do crudl.routes.entity("/campania_tipo/","rhrs_tipo_campana")
+	
+	@dbmvc_path="crudl/"
+	
+	@auto_crud=@true
+
+	@db_engine="MY_SQL"	
+
+	@list_view="list.dk"
+	@form_view="form.dk"
+	@error_view="error.dk"
+
+	@entity_id_blank="_new"
+
+	@dkl_view_ext=".dk"
+	@websencia_ext=".jsnwm"
+
+    @crudl.user="admin"
+    @crudl.pwd=""
+
+    @path_template_protected=@path_root+"/_protected/default.htt"
+
+    @crudl.enable_idreplacement=@true
+
+    @ws=@@(@http_context,"request/get/ws")
+
+    @crudl.qname=""
+
+	@crudl.access_privilege='
+	{
+		"access":[{"workspace":"'+@ws+'"}]
+	}'
+
+	#include "crudl/controller.dkl"
+}
