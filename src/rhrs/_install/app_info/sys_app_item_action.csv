@@ -1,10 +1,10 @@
 "id","title","shorttitle","icon16x16","href","_blank","appid","itemtype","req_context_item_id","act_type"
 
-"HB11","Agregar campaña","Agregar","","/!/rhrs/campania/_new/","0","rhrs.campania","rscamp","0","action"
-"HB12","Editar campaña","Editar","","/!/rhrs/campania/@_src_context_item_id/","0","rhrs.campania","rscamp","1","action"
-"HB13","Eliminar campaña","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.campania","rscamp","1","action"
+"HB11","Agregar campaña","Agregar","","/!/rhrs/campania/_new/","0","rhrs.campania","DET00B","0","action"
+"HB12","Editar campaña","Editar","","/!/rhrs/campania/@_src_context_item_id/","0","rhrs.campania","DET00B","1","action"
+"HB13","Eliminar campaña","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.campania","DET00B","1","action"
 
-"HB20","Tipos de campaña","Tipos de campaña","","/!/rhrs/campania_tipo/","0","rhrs.campania_tipo","trscamp","0","action"
-"HB21","Agregar tipo de campaña","Agregar","","/!/rhrs/campania_tipo/_new/","0","rhrs.campania_tipo","trscamp","0","action"
-"HB22","Editar tipo de campaña","Editar","","/!/rhrs/campania_tipo/@_src_context_item_id/","0","rhrs.campania_tipo","trscamp","1","action"
-"HB23","Eliminar tipo de campaña","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.campania_tipo","trscamp","1","action"
+"HB20","Tipos de campaña","Tipos de campaña","","/!/rhrs/campania_tipo/","0","rhrs.campania_tipo","DET053","0","action"
+"HB21","Agregar tipo de campaña","Agregar","","/!/rhrs/campania_tipo/_new/","0","rhrs.campania_tipo","DET053","0","action"
+"HB22","Editar tipo de campaña","Editar","","/!/rhrs/campania_tipo/@_src_context_item_id/","0","rhrs.campania_tipo","DET053","1","action"
+"HB23","Eliminar tipo de campaña","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.campania_tipo","DET053","1","action"
