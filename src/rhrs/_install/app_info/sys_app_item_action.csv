@@ -8,3 +8,7 @@
 "HB21","Agregar tipo de campaña","Agregar","","/!/rhrs/campania_tipo/_new/","0","rhrs.campania_tipo","DET053","0","action"
 "HB22","Editar tipo de campaña","Editar","","/!/rhrs/campania_tipo/@_src_context_item_id/","0","rhrs.campania_tipo","DET053","1","action"
 "HB23","Eliminar tipo de campaña","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.campania_tipo","DET053","1","action"
+
+"HB31","Crear requisición de personal","Crear","","/!/rhrs/reqper/_new/","0","rhrs.rh_reqper","DET07C","0","action"
+"HB32","Editar requisición de personal","Editar","","/!/rhrs/reqper/@_src_context_item_id/","0","rhrs.rh_reqper","DET07C","1","action"
+"HB33","Eliminar requisición de personal","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.rh_reqper","DET07C","1","action"

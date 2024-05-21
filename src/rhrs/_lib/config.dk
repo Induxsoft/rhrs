@@ -2,6 +2,35 @@
 #!
 module ""
 {
+    if not(isset("@http_context")) && isset("@crud_context") { ref @http_context = @@(@crud_context,"&http") }
+	
+	@curr_ndt = ndatetime.now()
+    @curr_year = ndatetime.year(@curr_ndt)
+    @curr_month = ndatetime.month(@curr_ndt)
+    @curr_day = ndatetime.day(@curr_ndt)
+    // rh_req_status
+    @stt_req_pendiente = 1
+    @stt_req_aprobada = 2
+    @stt_req_completada = 10
+    @stt_req_cancelada = 99
+
+    @default_max_rows = 250 // limite de registros para las vistas de lista.
+    @error_det = @false // Mostrar detalles del error: @true -> {code} description [Ln 000] | @false -> description
+
+    //* ======================================== [ _STATIC RESOURCES ]
+    // css
+    @CSS_MAIN = "/$/rhrs/css/main.css"
+    // js
+    @JS_MAIN = "/$/rhrs/js/main.js"
+    @JS_RH_REQ = "/$/rhrs/js/rh_req.js"
+
+    //* ======================================== [ _PACKAGE ]
+    // services
+    @URL_BUSCAR_PUESTO = "/!/rhrs/reqper/?_view=buscar-puesto&search=@search"
+    // applications
     @RH_CAMPANIA = "/!/rhrs/campania/"
     @RH_CAMPANIA_TIPO = "/!/rhrs/campania_tipo/"
+    @RH_REQPER = "/!/rhrs/reqper/"
+
+    //* ======================================== [ AUTHORIZATIONS ]
 }

@@ -5,11 +5,13 @@ module "Controller configs"
 	#include "functions.dkh"
 	#include "serialize.dkh"
 	#include "dbr.dkh"
+	#include "dbr.apps.dkl"
 	#include "dbr.vars.dkl"
 	#include "dbr.notif.dkl"
 	#include "crudl/crudl.dk"
 	#include "_lib/config.dk"
 	#include "_lib/lib.dk"
+	#include "_lib/list.queries.dk"
 
 	if @@(@http_context,"$session/user/ids") == "" {
 		@http_context<"response/headers/location"> : "/"
@@ -35,7 +37,7 @@ module "Controller configs"
 	text end_body
 	{$''}
 
-	@http_context<"session/resource/properties/web_meta_tags/title"> : "QA"
+	@http_context<"session/resource/properties/web_meta_tags/title"> : "RHRS"
 	@http_context<"session/resource/properties/web_page/end_head"> : end_head
 	@http_context<"session/resource/properties/web_page/start_body"> : start_body
 	@http_context<"session/resource/properties/web_page/end_body"> : end_body
@@ -43,6 +45,7 @@ module "Controller configs"
 	do crudl.routes.pattern("/_program/")
 	do crudl.routes.entity("/campania/","rhrs_campana")
 	do crudl.routes.entity("/campania_tipo/","rhrs_tipo_campana")
+	do crudl.routes.entity("/reqper/","rh_req")
 	
 	@dbmvc_path="crudl/"
 	

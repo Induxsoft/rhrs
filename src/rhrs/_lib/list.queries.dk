@@ -1,0 +1,18 @@
+#include "dkli.dkh"
+#!
+module "Lista de consultas MySQL"
+{
+    @qry_buscar_puesto = "
+    SELECT
+        p.sys_pk,
+        p.sys_guid,
+        p.codigo,
+        p.descripcion,
+        IFNULL(u.descripcion,'') AS unidad_org
+    FROM rh_puesto_org AS p
+        LEFT JOIN rh_unidad_org AS u ON p.ref_unidad_org = u.sys_pk
+    WHERE #<conditions>
+    "
+
+    @qry_req_status = "SELECT id, const FROM rh_req_status"
+}

@@ -1,0 +1,372 @@
+#include "dkli.dkh"
+#!
+module "Requisición de personal :reqper"
+{
+    @table_name = "rh_req"
+    @keyfield = "sys_pk"
+    @sys_fields = "sys_pk,sys_guid,sys_dtcreated,sys_timestamp,sys_info,sys_user,sys_lastuser,sys_exported,sys_dtexported,sys_recver,sys_deleted,sys_lock"
+
+    @create_fields = @sys_fields+",referencia,fecha,flimite,elaboro,notas,ref_status"
+    @update_fields = @sys_fields+",referencia,fecha,flimite,fstatus,fcompleto,aprobo,notas"
+    
+    @create_exclude_fields = "sys_lastuser,sys_lock"
+    @update_exclude_fields = "sys_pk,sys_guid,sys_dtcreated,sys_user"
+    
+    @create_alias_fields = ""
+    @update_alias_fields = ""
+
+    @list_query = "
+    SELECT
+        req.sys_pk,
+        req.referencia,
+        IFNULL(DATE_FORMAT(req.fecha,'%Y-%m-%d'),'') AS fecha,
+        IFNULL(DATE_FORMAT(req.flimite,'%Y-%m-%d'),'') AS flimite,
+        IFNULL(DATE_FORMAT(req.fstatus,'%Y-%m-%d'),'') AS fstatus,
+        IFNULL(DATE_FORMAT(req.fcompleto,'%Y-%m-%d'),'') AS fcompleto,
+        req.elaboro,
+        req.aprobo,
+        stt.const AS cstatus
+    FROM rh_req AS req
+        INNER JOIN rh_req_status AS stt ON req.ref_status = stt.id
+    WHERE NOT IFNULL(req.sys_deleted,0)
+        #<conditions>
+    ORDER BY req.fecha ASC
+    LIMIT #<@default_max_rows>
+    "
+    @read_query = "
+    SELECT
+        req.sys_pk,
+        req.sys_recver,
+        req.referencia,
+        IFNULL(DATE_FORMAT(req.fecha,'%Y-%m-%d'),'') AS fecha,
+        IFNULL(DATE_FORMAT(req.flimite,'%Y-%m-%d'),'') AS flimite,
+        IFNULL(req.notas,'') AS notas,
+        req.ref_status
+    FROM rh_req AS req
+    WHERE #<@keyfield> = @_entity_id
+        #<conditions>
+    "
+    @childs_query = "
+    SELECT
+        det.ref_req,
+        det.ref_puesto,
+        IFNULL(det.cant_solicitada,0) AS cant_solicitada,
+        IFNULL(det.cant_aprobada,0) AS cant_aprobada,
+        IFNULL(det.cant_contratada,0) AS cant_contratada,
+        IFNULL(det.notas,'') AS notas,
+        pto.descripcion AS dpuesto,
+        IFNULL(uni.descripcion,'') AS dunidad
+    FROM rh_req_det AS det
+        INNER JOIN rh_puesto_org AS pto ON det.ref_puesto = pto.sys_pk
+        LEFT JOIN rh_unidad_org AS uni ON pto.ref_unidad_org = uni.sys_pk
+    WHERE det.ref_req = IFNULL(@_entity_id,@sys_pk)
+    "
+
+    buscarPuesto::&db,&params
+    {
+        if trim(@@(params,"$id")) != ""
+        {
+            conditions = "(p.sys_pk = @id OR p.sys_guid = @id)"
+            return dbr.rec(db,ftext(@qry_buscar_puesto),params)
+        }
+        if trim(@@(params,"$search")) != ""
+        {
+            conditions = "(p.codigo LIKE CONCAT('%',@search,'%') OR p.descripcion LIKE CONCAT('%',@search,'%'))"
+            return dbr.list(db,ftext(@qry_buscar_puesto),params)
+        }
+        return list.create()
+    }
+
+    prepareView::&db,&params,&data
+    {
+        // code...
+    }
+
+    prepareList::&db,&params,&data
+    {
+        ref req_status = dbr.list(db,@qry_req_status,@null)
+        new stt_3
+        {
+            @"id": 3
+            @"const": "Pendientes y aprobadas"
+        }
+        do list.ins(req_status,2,stt_3)
+
+        ref fdr_fields = from.json('[
+            {"id":1, "const":"Elaboración"},
+            {"id":2, "const":"F. Limite"},
+            {"id":3, "const":"F. Status"},
+            {"id":4, "const":"F. Completó"},
+        ]')
+
+        using data
+        {
+            @"list_status*": req_status
+            @"list_fdr_field*": fdr_fields
+        }
+
+        return data
+    }
+
+    evaluateFilters::&params
+    {
+        // Predeterminado
+        if not(field.exist(params,"fil_status")){ params<"fil_status"> : 3 } // pendientes y aprobadas
+
+        conditions = ""
+
+        if @@(params,"#fil_status") > 0
+        {
+            if @@(params,"#fil_status") == 3 { conditions = conditions + "AND req.ref_status IN (1,2)" }
+            else { conditions = conditions + "AND req.ref_status = @fil_status" }
+        }
+        if trim(@@(params,"$fil_text")) != "" { conditions = conditions + "AND (req.referencia LIKE CONCAT('%',@fil_text,'%'))" }
+
+        // filter-date-range [start]
+        new vnt_date_fields
+        {
+            @"1": "req.fecha"
+            @"2": "req.flimite"
+            @"3": "req.fstatus"
+            @"4": "req.fcompleto"
+        }
+        fdr_field = @@(vnt_date_fields,str(@@(params,"#fil_fdr_field")))
+
+        switch @@(params,"$fdr_mode")
+        {
+            case "month"
+            {
+                curr_ndt = ndatetime.now()
+                curr_year = ndatetime.year(curr_ndt)
+                curr_month = ndatetime.month(curr_ndt)
+                curr_day = ndatetime.day(curr_ndt)
+
+                if not(field.exist(params,"fdr_year")) { params<"fdr_year"> : curr_year }
+                if not(field.exist(params,"fdr_month")) { params<"fdr_month"> : curr_month }
+
+                conditions = conditions + " AND YEAR(#<fdr_field>) = @fdr_year AND MONTH(#<fdr_field>) = @fdr_month"
+                break
+            }
+            case "lastdays"
+            {
+                if not(field.exist(params,"fdr_range")) { params<"fdr_range"> : 30 } // Últimos 30 días
+
+                conditions = conditions + " AND DATE(#<fdr_field>) BETWEEN ADDDATE(DATE(NOW()), INTERVAL -@fdr_range DAY) AND DATE(NOW())"
+                break
+            }
+            case "range"
+            {
+                if not(field.exist(params,"fdr_from"))
+                {
+                    curr_ndt = ndatetime.now()
+                    subt_ndt = ndatetime.add(curr_ndt, -30, "d")
+                    ult_30_days = ndatetime.tostr(subt_ndt, "yyyy-MM-dd")
+
+                    params<"fdr_from"> : ult_30_days
+                }
+                if not(field.exist(params,"fdr_to")) { params<"fdr_to"> : hoy("yyyy-MM-dd") }
+
+                if trim(@@(params,"$fdr_from")) != "" && trim(@@(params,"$fdr_to")) != ""
+                {
+                    conditions = conditions + " AND DATE(#<fdr_field>) BETWEEN @fdr_from AND @fdr_to"
+                }
+                else if trim(@@(params,"$fdr_from")) != "" && trim(@@(params,"$fdr_to")) == ""
+                {
+                    conditions = conditions + " AND DATE(#<fdr_field>) >= @fdr_from"
+                }
+                else if trim(@@(params,"$fdr_from")) == "" && trim(@@(params,"$fdr_to")) != ""
+                {
+                    conditions = conditions + " AND DATE(#<fdr_field>) <= @fdr_to"
+                }
+
+                break
+            }
+        }
+        // filter-date-range [end]
+
+        conditions = ftext(conditions)
+        @list_query = ftext(@list_query)
+    }
+
+    changeStatus::&db,&params,&data
+    {
+        new status
+        {
+            @"sys_pk": @@(data,"#sys_pk")
+            @"sys_recver": @@(data,"#sys_recver")
+            @"ref_status": @@(data,"#status")
+        }
+
+        if @@(data,"#status") == @stt_req_aprobada
+        {
+            status<"fstatus*"> : now()
+            status<"aprobo"> : @@(@http_context, "$session/user/uid")
+        }
+        if @@(data,"#status") == @stt_req_cancelada
+        {
+            status<"fstatus*"> : now()
+        }
+
+        ref entity = dbr.save(db,@table_name,status)
+
+        new response
+        {
+            @"entity*": entity
+            @"url_redir": replace(@url_redir,"@ireqper",@@(entity,"#sys_pk"))
+        }
+        return response
+    }
+
+    list::&db,&params
+    {
+        do reqper.evaluateFilters(params)
+        new data
+        {
+            @"data*": entity.list(db,params)
+            @"itemactions*": dbr.apps.itemactions(db,"DET07C","action","",0)
+            @"itemreports*": dbr.apps.itemactions(db,"DET07C","report","",0)
+        }
+        do reqper.prepareList(db,params,data)
+
+        return data
+    }
+
+    read::&db,&params
+    {
+        if not(isset("@read_entity_only")){ @read_entity_only = @false }
+        if @read_entity_only { return entity.read(db,params) }
+
+        new data
+        {
+            @"entity*": entity.read(db,params)
+            @"detail*": dbr.list(db,ftext(@childs_query),params)
+        }
+        do reqper.prepareView(db,params,data)
+
+        return data
+    }
+
+    blank::&db,&params
+    {
+        new data {}
+        do reqper.prepareView(db,params,data)
+
+        return data
+    }
+
+    create::&db,&params,&data
+    {
+        namespace "reqper"
+
+        @use_transaction = @false
+        @read_entity_only = @true
+
+        ref req = record.copy(data,"*")
+        ref det = from.json(@@(req,"$_detalle"))
+
+        using req
+        {
+            @"fecha*": if(@@(data,"fecha")!="", str2dt(@@(data,"fecha")), @null)
+            @"flimite*": if(@@(data,"flimite")!="", str2dt(@@(data,"flimite")), @null)
+            @"elaboro": @@(@http_context, "$session/user/uid")
+            @"ref_status": @stt_req_pendiente
+            @"notas": trim(@@(data,"notas"))
+            @"_detalle*": det
+        }
+
+        using @childs
+        {
+            member "_detalle"
+            {
+                @"joinfield": "ref_req"
+                @"keyfield": "sys_pk"
+                @"table": "rh_req_det"
+                @"select_query": @childs_query
+                @"fields": "ref_puesto,cant_solicitada,cant_aprobada,cant_contratada,notas"
+            }
+        }
+
+        do dbr.begin(db)
+        ref entity = entity.create(db,params,req)
+        do dbr.commit(db)
+
+        new response
+        {
+            @"entity*": entity
+            @"url_redir": replace(@url_redir,"@ireqper",@@(entity,"#sys_pk"))
+        }
+        return response
+
+        exception{ do catch(db,params,data) }
+    }
+
+    update::&db,&params,&data
+    {
+        namespace "reqper"
+
+        if @@(params,"$_act") == "change-status" { return changeStatus(db,params,data) }
+
+        @use_transaction = @false
+        @read_entity_only = @true
+
+        ref req = record.copy(data,"*")
+        ref det = from.json(@@(req,"$_detalle"))
+
+        using req
+        {
+            @"fecha*": if(@@(data,"fecha")!="", str2dt(@@(data,"fecha")), @null)
+            @"flimite*": if(@@(data,"flimite")!="", str2dt(@@(data,"flimite")), @null)
+            @"notas": trim(@@(data,"notas"))
+            @"_detalle*": det
+        }
+
+        using @childs
+        {
+            member "_detalle"
+            {
+                @"joinfield": "ref_req"
+                @"keyfield": "sys_pk"
+                @"table": "rh_req_det"
+                @"select_query": @childs_query
+                @"fields": "ref_puesto,cant_solicitada,cant_aprobada,cant_contratada,notas"
+            }
+        }
+
+        do dbr.begin(db)
+        ref entity = entity.update(db,params,req)
+        do dbr.commit(db)
+
+        new response
+        {
+            @"entity*": entity
+            @"url_redir": replace(@url_redir,"@ireqper",@@(entity,"#sys_pk"))
+        }
+        return response
+
+        exception{ do catch(db,params,data) }
+    }
+
+    delete::&db,&params
+    {
+        do dbr.delete(db,"rh_req_det","ref_req=@_entity_id",params)
+        do dbr.delete(db,"rh_req","sys_pk=@_entity_id",params)
+
+        return @null
+    }
+
+    catch::&db,&params,&data
+    {
+        do errordet(@error_det)
+        if dbr.in_transaction(db) { do dbr.rollback(db) }
+
+        ref FormData = record.copy(data,"*")
+        code = last_error_code()
+        error = last_error()
+
+        do record.clear(data)
+        data<"form*"> : FormData
+
+        do reqper.prepareView(db,params,data)
+        do rise_error(code,error)
+    }
+}

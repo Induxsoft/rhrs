@@ -1,0 +1,24 @@
+#include "dkli.dkh"
+#!
+module "Controller"
+{
+    switch @@(@http_context,"$request/get/_view")
+    {
+        case "buscar-puesto"
+        {
+            point @list to reqper.buscarPuesto
+            break
+        }
+        default
+        {
+            point @list to reqper.list
+            point @read to reqper.read
+            point @blank to reqper.blank
+
+            point @create to reqper.create
+            point @update to reqper.update
+            point @delete to reqper.delete
+            break
+        }
+    }
+}

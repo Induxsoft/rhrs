@@ -1,0 +1,24 @@
+.no-blur { outline: none !important; box-shadow: none !important; }
+
+.btn.btn-xs { padding: .20rem .4rem; font-size: .725rem; border-radius: .1rem; }
+
+.nav-link.active {
+    border: none !important;
+    border-bottom: 2px solid #0B5ED7 !important;
+    text-decoration: none !important;
+    color: #000 !important;
+    background-color: #F0F8FF !important;
+}
+
+.disabled-all * input,
+.disabled-all * select,
+.disabled-all * textarea,
+.disabled-all * button:not([role="tab"]),
+.disabled-all * input-key,
+.disabled-all * edit-table
+{
+    pointer-events: none;
+    user-select: none;
+    background-color: rgb(233, 236, 239);
+    opacity: 1;
+}

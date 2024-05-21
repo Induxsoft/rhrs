@@ -1,14 +1,75 @@
 #include "ddm.dkh"
 model "rhrs"
 {
+    /**
+    RHRS: Recursos humanos, reclutamiento y selección
+    =======================================================================
+    */
+
     #include "induxsoft.abstracts.ddm"
 
+    //* ======================================== [ DEPENDENCIAS (FK) ]
+    // Enumeración de niveles de escolaridad
+    entity "rh_nvl_escolaridad" : "EnumModel"
+    {
+        /**
+        * 0-Sin instrucción
+        * 1-Básica
+        * 2-Medio superior
+        * 3-Licenciatura
+        * 4-Maestría o especialidad
+        * 5-Doctorado
+        * 6-Post-doctorado
+        */
+    }
+    // Unidad organizacional
+	entity "rh_unidad_org" : "TableModel"
+	{
+		@"codigo" string(32) unique required
+		@"descripcion" string(150) required
+		@"superior" ref:"rh_unidad_org"
+		@"notas" string(4096)
+		@"link" string(1024)
+	}
+    // Puestos de empleados
+    entity "rh_puesto_org" : "TableModel"
+    {
+        @"codigo" string(32) unique required
+        @"descripcion" string(150) required
+        @"sat_riesgopuesto" string(5)
+        @"perfil" string(4096)
+        @"responsabilidades" string(4096)
+        @"funciones" string(4096)
+        @"beneficios" string(4096)
+        @"salariomensualbruto" decimal(16,4)
+        @"divisa" string(5)
+        @"ref_jefe" ref:"rh_puesto_org"
+        @"ref_unidad_org" ref:"rh_unidad_org"
+        @"notas" string(4096)
+        @"escolaridad" ref:"rh_nvl_escolaridad" required
+        @"plazas_previstas" int
+        @"link" string(1024)
+        @"smbofrecidos" decimal(8,2)
+    }
+
+    //* ======================================== [ ENTIDADES PRINCIPALES ]
+    // Enumeración de estados de requisición de personal
+    entity "rh_req_status" : "EnumModel"
+    {
+        /**
+        * 1-Pendiente
+        * 2-Aprobada
+        * 10-Completada
+        * 99-Cancelada
+        */
+    }
+    // Tipos de campañas de reclutamiento
     entity "rhrs_tipo_campana" : "TableModel"
     {
         @"codigo" string(50) unique required
         @"descripcion" string(50) unique required
     }
-
+    // Campañas de reclutamiento
     entity "rhrs_campana" : "TableModel"
     {
         @"codigo" string(50) unique required
@@ -17,5 +78,89 @@ model "rhrs"
 		@"fecha_ini" date required
 		@"fecha_fin" date required
 		@"ref_tipo_campana" ref: "rhrs_tipo_campana" required
+    }
+    // Requisición de personal
+    entity "rh_req": "TableModel"
+    {
+        @"fecha" date // Fecha de elaboración
+        @"flimite" date // Fecha límite para conseguir el personal
+        @"fstatus" datetime // Fecha y hora en que se aprobó o canceló la requisición (Se establece en automático)
+        @"fcompleto" datetime // Fecha y hora en que se completó la requisición (Se establece en automático)
+        @"notas" memo
+        @"elaboro" string(50) // user id de quien elabora la requisición (Se establece en automático)
+        @"aprobo" string(50) // user id de quien aprueba la requisición (Se establece en automático)
+        @"ref_status" ref:"rh_req_status" required  
+        @"referencia" string(32) unique required 
+    }
+    // Puestos (detalle) de requisición de personal
+    entity "rh_req_det": "TableModel"
+    {
+        @"ref_req" ref:"rh_req" required
+        @"ref_puesto" ref:"rh_puesto_org" required
+        @"notas" memo
+        @"cant_solicitada" int // Cantidad solicitada (Se debe llenar al capturar la requisición)
+        @"cant_aprobada" int // Cantidad aprobada (Se debe llenar al aprobar no disponible al capturar, de forma predeterminada debe sugerir la misma cantidad solicitada)
+        @"cant_contratada" int // Cantidad solicitada (No visible en la edición, solo hasta que ya está aprobada, se irá afectando [Incrementando] conforme se realicen contrataciones
+
+        index "rh_req_det_uq1" unique
+        {
+            field "ref_req"
+            field "ref_puesto"
+        }
+    }
+
+    //* ======================================== [ ... ]
+    // Permisos disponibles
+    entity "sitem" : "TableModel"
+    {
+        @"description" string(250)
+        @"itemid" string(32) unique required
+        @"itemparent" ref:"sitem"
+    }
+    // Información de la aplicación
+    entity "sys_app_catalog"
+    {
+        @"pack_id" string(32) required
+        @"app_id" string(32) key
+        @"app_title" string(255)
+        @"created" datetime required
+        @"app_info" mmemo
+    }
+    // Categoria de la aplicación
+    entity "sys_app_category"
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+    }
+    // Recursos de la aplicación
+    entity "sys_app_shortcut" 
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+        @"icon96x96" string(1024) required
+        @"src" string(1024) required
+        @"_blank" bool
+        @"appid" ref:"sys_app_catalog"
+        @"cat" ref:"sys_app_category"
+    }
+    // Tipos de elementos de la aplicación
+    entity "sys_app_item_type"
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+    }
+    // Acciones Generales o Especificas de elementos de la aplicación
+    entity "sys_app_item_action"
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+        @"shorttitle" string(25) 
+        @"icon16x16" string(1024) required
+        @"href" string(1024) required
+        @"_blank" bool
+        @"appid" ref : "sys_app_catalog"
+        @"itemtype" ref : "sys_app_item_type"
+        @"req_context_item_id" bool
+        @"act_type" string(15) //Cadena con el tipo de acción: 'action' o 'report'
     }
 }

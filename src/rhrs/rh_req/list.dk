@@ -1,0 +1,197 @@
+#include "dkli.dkh"
+#!
+module "list.dk"
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "uielements.v12.dkl"
+    #include "../_lib/config.dk"
+
+    do @context.begin(@crud_context)
+
+    ref @_GET = ifnull(@("&parameters"),record.create())
+    
+    // do rise_error(0,to.json(@("&.")))
+
+	@_entities_type = @("$parameters/_entities_type")
+	table_id = "tbl_"+@_entities_type
+
+    fdr_year_opt = ""
+    for i = 2024; i <= @curr_year { fdr_year_opt = fdr_year_opt + str(i) + "," }
+    fdr_year_opt = rremove(fdr_year_opt,1)
+
+    // Predeterminado: Elaboradas en los últimos 90 días
+    new fdr_init
+    {
+        @"fdr_mode": field.dstr(@_GET,"fdr_mode","lastdays")
+        // [month]
+        @"fdr_year": field.dnum(@_GET,"fdr_year",@curr_year)
+        @"fdr_month": field.dnum(@_GET,"fdr_month",@curr_month)
+        // [lastdays]
+        @"fdr_range": field.dnum(@_GET,"fdr_range",90)
+        // [range]
+        @"fdr_from": field.dstr(@_GET,"fdr_from","")
+        @"fdr_to": field.dstr(@_GET,"fdr_to","")
+    }
+
+    new fil_fdr_field
+    {
+        @"datatable*": ifnull(@("&./list_fdr_field"),list.create())
+        @"id": "fil_fdr_field"
+        member "attributes"
+        {
+            @"name": "fil_fdr_field"
+            @"class": "induxsoft-form-select"
+            @"title": "Elegir método de filtro para el rango de fechas"
+            @"onchange": "document.querySelector('#form_filter').submit();"
+        }
+        @"value_field": "id"
+        @"text_field": "const"
+        @"selected": @("#parameters/fil_fdr_field")
+    }
+
+    new fil_status
+    {
+        @"datatable*": ifnull(@("&./list_status"),list.create())
+        @"id": "fil_status"
+        member "attributes"
+        {
+            @"class": "induxsoft-form-select"
+            @"name": "fil_status"
+            @"title": "Filtrar por estados de la requisición"
+            @"onchange": "document.querySelector('#form_filter').submit();"
+        }
+        @"value_field": "id"
+        @"text_field": "const"
+        @"first_value": "-1"
+        @"first_text": "(Todos los estados)"
+        @"selected": @("#parameters/fil_status")
+    }
+
+    new table_definition
+    {
+        @"datatable*": ifnull(@("&./data"),list.create())
+        member @"columns"
+        {
+            member @"referencia" { @"caption": "Referencia" }
+            member @"fecha"
+            {
+                @"caption": "Elaboración"
+                @"align": "center"
+            }
+            member @"flimite"
+            {
+                @"caption": "F. Limite"
+                @"align": "center"
+            }
+            member @"fstatus"
+            {
+                @"caption": "F. Status"
+                @"align": "center"
+            }
+            member @"fcompleto"
+            {
+                @"caption": "F. Completó"
+                @"align": "center"
+            }
+            member @"elaboro" { @"caption": "U. Elaboro" }
+            member @"aprobo" { @"caption": "U. Aprobo" }
+            member @"cstatus"
+            {
+                @"caption": "Estado"
+                @"align": "center"
+            }
+        }
+        @"table_footer": "Mostrando los primeros # registros"
+    }
+
+    new nav_config
+    {
+        @"title": "Requisición de personal"
+        @"buttons*": @null
+        @"urlexit": "/"
+        @"main": "HB31,HB32,HB33"
+        @"actions*": ifnull(@("&./itemactions"),list.create())
+        @"reports*": ifnull(@("&./itemreports"),list.create())
+        @"jscurrentcontext": "getCurrentContext"
+    }
+
+    #$ div(class="container-fluid p-0")
+    {
+        #! do uie.printV12FormBar(nav_config)
+
+        #$ div(id="work_area" class="container-section mt-1 p-2 pt-0")
+        {
+            form(action="./" method="GET" id="form_filter" class="no-print mb-1")
+            {
+                div(class="d-flex align-items-center")
+                {
+                    div
+                    {
+                        ##
+                        do uie.dbSelect(fil_fdr_field)
+                        ##
+                    }
+                    div(class="flex-grow-1")
+                    {
+                        "filter-date-range"(
+                            "form"="#form_filter"
+                            "auto-submit"="true"
+                            "custom-range"="true"
+                            "selection"='#<to.json(fdr_init)>'
+
+                            "mode-field"="fdr_mode"
+                            "year-field"="fdr_year"
+                            "month-field"="fdr_month"
+                            "range-field"="fdr_range"
+                            "from-field"="fdr_from"
+                            "to-field"="fdr_to"
+                            
+                            "lastdays-options"="15,30,45,60,90"
+                            "years-options"="#<fdr_year_opt>"
+                            "month-names"="Enero,Febrero,Marzo,Abril,Mayo,Junio,Julio,Agosto,Septiembre,Octubre,Noviembre,Diciembre"
+                            
+                            "label-months"="Ver por cada mes"
+                            "label-days"="Últ. @lastdays días"
+                            "label-custom"="Personalizado"
+                            "label-from"="Desde:"
+                            "label-to"="Hasta:"
+                        ){$""}
+                    }
+                }
+
+                div(class="d-flex align-items-center gap-2 flex-wrap w-100 py-1")
+                {
+                    div(class="d-flex gap-2")
+                    {
+                        div{ #! do uie.dbSelect(fil_status) } #$
+                    }
+                    div(class="flex-grow-1")
+                    {
+                        "filter-text"(
+                            "id"="fil_text"
+                            "text-field"="fil_text"
+                            "placeholder"="Buscar ..."
+                            "form"="#form_filter"
+                            "value"="#<@('$parameters/fil_text')>"
+                            "auto-submit"="true"
+                            "class"="w-100"
+                        ){$""}
+                    }
+                }
+            }
+            #! do uie.dbeditable(table_definition,table_id)
+        }
+
+		#$
+		script(type="text/javascript")
+		{$'
+			function getCurrentContext()
+			{
+				const table = document.getElementById("#<table_id>");
+				const id = (table?.DataArray[table.CurrentRowIndex()]?.sys_pk ?? "");
+    			return { item_id:id, context: {} }
+			}
+		'}
+    }
+}

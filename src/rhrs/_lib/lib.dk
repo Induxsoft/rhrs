@@ -1,11 +1,123 @@
 #include "dkli.dkh"
+#pattern function "function '$name' ()"
 #!
-module "lib.dk"
+module "Funciones de propósito general:lib"
 {
+    function hoy(fmt)
+    {
+        return date_str(now(),str(fmt))
+    }
+
+    function between(value, min, max)
+    {
+        return value >= min && value <= max
+    }
+
+    function record_combine(&obj1,&obj2)
+    {
+        return record.copyexin(obj2,obj1,"*",",","",":")
+    }
+
+    function newrec()
+    {
+        new record
+        {
+            @"sys_pk": 0 // Clave primaria para la tabla (alcance local)
+            @"sys_guid": uuid() // GUID que puede usarse como clave primaria de alcance global
+            @"sys_dtcreated*": now() // Fecha y hora de creación del registro
+            @"sys_timestamp*": now() // Fecha y hora de la última actualización del registro (marca de tiempo con precisión hasta segundos)
+            @"sys_info": ""
+            @"sys_user": "" // UserId del usuario logueado que creo el registro.
+            @"sys_lastuser": "" // UserId del usuario logueado que modifico el registro.
+            @"sys_exported": @false // Indica si el registro ha sido exportado por las utilidades de transporte de datos
+            @"sys_dtexported*": @null // Indica la fecha en que se exportó por última vez
+            @"sys_recver": 0 // Número de versión de instancia de registro
+            @"sys_deleted": @false // Indica si la fila está marcada como eliminada
+            /**
+            * Clave foránea que indica si se ha establecido un bloqueo pesimista sobre la fila.
+            * Este campo admite valores Nulos que significan que el registro no está bloqueado.
+            * No se admiten duplicados
+            */
+            @"sys_lock*": @null
+        }
+        return record
+    }
+
+    function date_format(str,fmt)
+    {
+        fecha = trim(str(str))
+        formato = trim(str(fmt))
+
+        if fecha == "" { return "" }
+        if formato == "" { formato = "yyyy-MM-ddTHH:mm:ss" }
+
+        ref datetime = str2dt(fecha)
+        fecha = date_str(datetime,formato)
+
+        return fecha
+
+        exception
+        {
+            // do rise_error(99,"Debe proporcionar una cadena de fecha con un formato válido.")
+            do clear_exceptions()
+            return ""
+        }
+    }
+
+    function fix_data_array(&list,length)
+    {
+        add = (length - list.count(list))
+        repeat add
+        {
+            do list.add(list,record.create())
+        }
+    }
+
+    function list_years(yearsBack,yearsForward)
+    {
+        ndt = ndatetime.now()
+        yearFrom = ndatetime.add(ndt, ((yearsBack + 1) * -1), "y")
+        
+        ref list = list.create()
+        date = yearFrom
+
+        for i = 1; i < yearsBack + (yearsForward + 2)
+        {
+            date = ndatetime.add(date,1,'y')
+            do list.add(list, ndatetime.year(date))
+        }
+        return list
+    }
+
+    function curr_url()
+    {
+        if not(isset("@http_context")) && isset("@crud_context") { ref @http_context = ifnull(@@(@crud_context,"&http"),record.create()) }
+        ref parameters = ifnull(@@(@http_context,"&request/get"),record.create())
+
+        v12_params = "_pack,_program,_entities_type,_entity_id,_view,_operation"
+        ref v12params = record.copy(parameters,v12_params)
+
+        v12_path = "/!/_pack/_program/_entity_id/_view/"
+        go foreach.fstr(key:key, value:value) with(v12params)
+        {
+            v12_path = replace(v12_path,key,value)
+        }
+        v12_path = replace(v12_path,"//","/")
+
+        http_args = "?"
+        go foreach.fstr(key:key, value:value) with(parameters)
+        {
+            if not(containsword(key,v12_params)) { http_args = http_args + key + "=" + value + "&" }
+        }
+        http_args = rremove(http_args,1)
+
+        return path.concat(v12_path,http_args)
+    }
+
     function form(name,type,&obj)
     {
         name = trim(str(name))
-        if isnull(obj) { new obj {} }
+        if isnull(obj) { ref obj:record.create() }
 
         switch str(type)
         {
@@ -47,7 +159,31 @@ module "lib.dk"
                 if fecha == "" { fecha = date_str(now(),"yyyy-MM-dd") }
                 return fecha
             }
+            case "dtm"
+            {
+                fecha = trim(@("$./form/"+name))
+                if fecha == "" { fecha = trim(@("$input/"+name)) }
+                if fecha == "" { fecha = trim(@@(obj,"$"+name)) }
+                if fecha == "" { fecha = date_str(now(),"yyyy-MM-dd HH:mm:ss") }
+                return fecha
+            }
             default { return "" }
         }
+    }
+
+    function AppExist(&db,packId)
+    {
+        new p { @"id": packId }
+        ref InstalledApps = dbr.list(db,"SELECT * FROM sys_app_catalog WHERE pack_id = @id;",p)
+        exist = (list.count(InstalledApps) > 0)
+        return exist
+
+        exception{ return @false }
+    }
+
+    function GetPkUsr(&db,usrId)
+    {
+        new params { @"id": usrId }
+        return dbr.num(db,"SELECT usr.sys_pk FROM tuser AS usr LEFT JOIN sys_session AS ss ON usr.sys_pk = ss.iuser WHERE usr.sys_guid = @id OR usr.userid = @id OR ss.sys_guid = @id",params)
     }
 }
