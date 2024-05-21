@@ -12,3 +12,5 @@
 "HB31","Crear requisición de personal","Crear","","/!/rhrs/reqper/_new/","0","rhrs.rh_reqper","DET07C","0","action"
 "HB32","Editar requisición de personal","Editar","","/!/rhrs/reqper/@_src_context_item_id/","0","rhrs.rh_reqper","DET07C","1","action"
 "HB33","Eliminar requisición de personal","Eliminar","","javascript:InduxsoftCrudlModel.Delete(@_src_context_item_id);","0","rhrs.rh_reqper","DET07C","1","action"
+"HB34","Aprobar requisición de personal","Aprobar","","/!/rhrs/reqper/@_src_context_item_id/?_act=aprobar","0","rhrs.rh_reqper","DET07C","1","action"
+"HB35","Cancelar requisición de personal","Cancelar","","/!/rhrs/reqper/@_src_context_item_id/?_act=cancelar","0","rhrs.rh_reqper","DET07C","1","action"

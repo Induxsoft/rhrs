@@ -7,7 +7,7 @@ module "Requisición de personal :reqper"
     @sys_fields = "sys_pk,sys_guid,sys_dtcreated,sys_timestamp,sys_info,sys_user,sys_lastuser,sys_exported,sys_dtexported,sys_recver,sys_deleted,sys_lock"
 
     @create_fields = @sys_fields+",referencia,fecha,flimite,elaboro,notas,ref_status"
-    @update_fields = @sys_fields+",referencia,fecha,flimite,fstatus,fcompleto,aprobo,notas"
+    @update_fields = @sys_fields+",referencia,fecha,flimite,fstatus,fcompleto,aprobo,notas,ref_status"
     
     @create_exclude_fields = "sys_lastuser,sys_lock"
     @update_exclude_fields = "sys_pk,sys_guid,sys_dtcreated,sys_user"
@@ -48,6 +48,8 @@ module "Requisición de personal :reqper"
     "
     @childs_query = "
     SELECT
+        det.sys_pk,
+        det.sys_recver,
         det.ref_req,
         det.ref_puesto,
         IFNULL(det.cant_solicitada,0) AS cant_solicitada,
@@ -269,7 +271,6 @@ module "Requisición de personal :reqper"
             @"fecha*": if(@@(data,"fecha")!="", str2dt(@@(data,"fecha")), @null)
             @"flimite*": if(@@(data,"flimite")!="", str2dt(@@(data,"flimite")), @null)
             @"elaboro": @@(@http_context, "$session/user/uid")
-            @"ref_status": @stt_req_pendiente
             @"notas": trim(@@(data,"notas"))
             @"_detalle*": det
         }
@@ -320,6 +321,12 @@ module "Requisición de personal :reqper"
             @"_detalle*": det
         }
 
+        if @@(data,"#ref_status") == @stt_req_aprobada
+        {
+            req<"fstatus*"> : now()
+            req<"aprobo"> : @@(@http_context, "$session/user/uid")
+        }
+
         using @childs
         {
             member "_detalle"
@@ -328,7 +335,7 @@ module "Requisición de personal :reqper"
                 @"keyfield": "sys_pk"
                 @"table": "rh_req_det"
                 @"select_query": @childs_query
-                @"fields": "ref_puesto,cant_solicitada,cant_aprobada,cant_contratada,notas"
+                @"fields": "sys_pk,sys_recver,ref_puesto,cant_solicitada,cant_aprobada,cant_contratada,notas"
             }
         }
 

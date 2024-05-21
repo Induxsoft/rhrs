@@ -11,6 +11,8 @@ module "Controller"
         }
         default
         {
+            if @@(@http_context,"$request/get/_act") == "aprobar" { @form_view = "form.aprobar.dk" }
+
             point @list to reqper.list
             point @read to reqper.read
             point @blank to reqper.blank

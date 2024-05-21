@@ -1,23 +1,27 @@
 var reqper =
 {
-    formId:"", form:null, tableId:"", table:null,
+    formId:"", form:null, tableId:"", table:null, _GET:{},
     url_exit:"",
-    error_timeout:7,
+    is_new:false, cur_status:0, error_timeout:7,
 
     init()
     {
         this.form = document.getElementById(this.formId);
         this.table = document.getElementById(this.tableId);
+        this.is_new = (this._GET["_entity_id"] === "_new");
         const btn_guardar = document.getElementById("btn_guardar");
         const btn_aprobar = document.getElementById("btn_aprobar");
         const btn_cancelar = document.getElementById("btn_cancelar");
 
-        btn_guardar.addEventListener("click", () => this.submit());
-        if (btn_aprobar) btn_aprobar.addEventListener("click", () => this.changeStatus(btn_aprobar));
+        if (btn_guardar) btn_guardar.addEventListener("click", () => this.submit(btn_guardar));
+        if (btn_aprobar) btn_aprobar.addEventListener("click", () => this.submit(btn_aprobar));
         if (btn_cancelar) btn_cancelar.addEventListener("click", () => this.changeStatus(btn_cancelar));
 
         this.setKeyboardShortcuts();
         this.setEventTable();
+
+        if (this._GET["_act"] === "aprobar") this.coloringNoEditableCells();
+        if (this._GET["_act"] === "cancelar" && this.cur_status === 2) this.changeStatus(btn_cancelar);
     },
 
     setKeyboardShortcuts()
@@ -48,9 +52,9 @@ var reqper =
 
         this.table.setInputKey("dpuesto",ik_puesto);
 
-        btn_add_row.addEventListener("click", () => ik_puesto.searchText("",false));
-        btn_del_row.addEventListener("click", () => this.table.DeleteCurrentRow());
-        ik_puesto.change_event = (data) => this.agregarPuesto(data);
+        if (btn_add_row) btn_add_row.addEventListener("click", () => ik_puesto.searchText("",false));
+        if (btn_del_row) btn_del_row.addEventListener("click", () => this.table.DeleteCurrentRow());
+        if (ik_puesto) ik_puesto.change_event = (data) => this.agregarPuesto(data);
 
         this.table.Events[evt.BeforeUpdateCell] = (e) =>
         {
@@ -58,8 +62,14 @@ var reqper =
             let data_row = this.table?.DataArray[curr_row] ?? {};
             let field = e.coldef.field;
 
-            if (field === "cant_solicitada" && Number(e.text.trim()) <= 0) {
+            if ((field === "cant_solicitada" || field === "cant_aprobada") && Number(e.text.trim()) <= 0) {
                 show_alert("#tbl_alerts","El valor debe ser mayor que 0.",3);
+                e.cancel = true;
+                return false;
+            }
+
+            if (field === "cant_aprobada" && Number(e.text.trim()) > Number(data_row["cant_solicitada"])) {
+                show_alert("#tbl_alerts","La cantidad aprobada no puede ser mayor que la cantidad solicitada.",3);
                 e.cancel = true;
                 return false;
             }
@@ -67,18 +77,28 @@ var reqper =
 
         this.table.Events[evt.ConfirmEdition] = (e) =>
         {
-            // code...
+            let curr_row = e.sender.RowIndexOfTd(e.td);
+            let data_row = this.table?.DataArray[curr_row] ?? {};
+            let field = e.coldef.field;
+
+            if (field === "cant_solicitada")
+            {
+                data_row["cant_aprobada"] = Number(e.text.trim());
+                this.table.UpdateRow(curr_row);
+            }
         };
     },
 
-    submit()
+    submit(relbtn)
     {
         if (!this.form) return;
         if (!this.form.reportValidity()) return;
 
         let _detalle = this.filterDataArray(this.table);
+        let new_status = Number(relbtn.getAttribute("data-status"));
         
         let fd = new FormData(this.form);
+        fd.append("ref_status",new_status);
         fd.append("_detalle",JSON.stringify(_detalle));
 
         let endpoint = "./";
@@ -90,7 +110,9 @@ var reqper =
                 return;
             }
 
-            window.location.href = data.url_redir;
+            alert("Información guardada");
+            window.location.href = this.url_exit;
+            // window.location.href = data.url_redir;
         }
 
         const onFailure = (error) => {
@@ -133,6 +155,26 @@ var reqper =
     filterDataArray(edt) {
         if (!edt) return [];
         return (edt?.DataArray??[]).filter((row) => { return Object.keys(row??{}).length >= edt.Columns.length })
+    },
+
+    coloringNoEditableCells()
+    {
+        let array = this.table?.DataArray ?? [];
+        for (let i = 0; i < array.length; i++) {
+            if (Object.keys(array[i]).length < this.table.Columns.length) continue;
+
+            const tr = this.table.GetTrByIndex(i);
+            tr.querySelectorAll("td").forEach(td => {
+                const coldef = this.table.GetColumnDefOfTd(td);
+                
+                if (coldef.type === "NoEditable")
+                {
+                    td.style.backgroundColor = "rgb(233, 236, 239)";
+                    td.style.color = "#000000";
+                    td.style.opacity = "1";
+                }
+            });
+        }
     },
 
     agregarPuesto(data)

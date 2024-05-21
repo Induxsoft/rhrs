@@ -4,7 +4,6 @@ module "form.dk"
 {
     #include "functions.dkh"
     #include "serialize.dkh"
-    #include "webcl.dkh"
     #include "uielements.v12.dkl"
     #include "../_lib/config.dk"
     #include "../_lib/lib.dk"
@@ -21,33 +20,9 @@ module "form.dk"
 
 	is_new = (@_entity_id == "_new")
     cur_status = @@(entity,"#ref_status")
-    url_exit = @RH_REQPER
-    
-    @show_btn_aprobar = (cur_status == @stt_req_pendiente)
-    @show_btn_cancelar = (cur_status == @stt_req_aprobada)
-    @enable_editing = (is_new || cur_status == @stt_req_pendiente)
+    url_exit = replace(@RH_READ_REQPER,"@ireqper",@_entity_id)
 
-    // if @("$parameters/_act")=="cancelar" && cur_status == @stt_req_aprobada
-    // {
-    //     protocol = ifstr(parse.bool(@@(@http_context,"$request/headers/HTTPS")),"https","http")
-    //     hostname = @@(@http_context, "$request/headers/HTTP_HOST")
-
-    //     endpoint = path.concat(ftext("#<protocol>://#<hostname>"), path.concat(replace(@RH_READ_REQPER,"@ireqper",@_entity_id), "/change-status/"))
-    //     new headers
-    //     {
-    //         @"Content-Type": "application/json"
-    //         @"Accept": "application/json"
-    //     }
-    //     new payload
-    //     {
-    //         @"sys_pk": @@(entity,"#sys_pk")
-    //         @"sys_recver": @@(entity,"#sys_recver")
-    //         @"status": @stt_req_cancelada
-    //     }
-    //     do http.request(endpoint,"PATCH",headers,to.json(payload))
-
-    //     @http_context<"response/headers/location"> : url_exit
-    // }
+    if cur_status != @stt_req_pendiente { @http_context<"response/headers/location"> : url_exit }
 
     do lib.fix_data_array(detail,10)
 
@@ -56,24 +31,14 @@ module "form.dk"
         act_btn_cls = "btn btn-sm border-secondary induxsoft-corners btn-main-action no-print"
         
         #$
-        button(class="#<act_btn_cls>" type="button" id="btn_guardar" "data-status"="#<@stt_req_pendiente>" title="Guardar"){$"#<@ICON_SAVE>"}
+        button(class="#<act_btn_cls>" type="button" id="btn_aprobar" "data-status"="#<@stt_req_aprobada>"){$"#<@ICON_CHECK> Continuar"}
         #!
-
-        if @show_btn_aprobar
-        {
-            view_aprobar = path.concat(replace(@RH_READ_REQPER,"@ireqper",@_entity_id),"/?_act=aprobar")
-            #$
-            a(class="#<act_btn_cls>" href="#<view_aprobar>"){$"#<@ICON_CHECK> Aprobar"}
-            #!
-        }
-        // if @show_btn_aprobar {#$ button(class="#<act_btn_cls>" type="button" id="btn_aprobar" "data-status"="#<@stt_req_aprobada>"){$"#<@ICON_CHECK> Aprobar"} #!}
-        if @show_btn_cancelar {#$ button(class="#<act_btn_cls>" type="button" id="btn_cancelar" "data-status"="#<@stt_req_cancelada>"){$"#<@ICON_TRASH> Cancelar"} #!}
     }
     point print_buttons to fn_print_buttons
 
     new nav_config
     {
-        @"title": ifstr(is_new,"Nueva",'Editar') + " requisición de personal"
+        @"title": "Aprobar "+@@(entity,"$referencia")
         @"buttons*": print_buttons
         @"urlexit": url_exit
         member @"hidden" { @"print": @true }
@@ -87,11 +52,11 @@ module "form.dk"
         #$
         link(href="#<@CSS_MAIN>" rel="stylesheet")
         
-        div(class="container-section #<ifstr(not(@enable_editing),'disabled-all','')>" id="work_area")
+        div(class="container-section" id="work_area")
         {
             div(class="alert alert-danger overflow-auto mb-2 #<ifstr(@('$error/message')!='','','d-none')>" id="frm_alerts"){$"#<@('error/message')>"}
 
-            form(method="POST" action="./" id="frm_reqper")
+            form(class="disabled-all" method="POST" action="./" id="frm_reqper")
             {
                 input(type="hidden" name="sys_pk" value="#<@@(entity, '#sys_pk')>")
                 input(type="hidden" name="sys_recver" value="#<@@(entity, '#sys_recver')>")
@@ -123,10 +88,7 @@ module "form.dk"
 
             div(class="d-flex justify-content-end align-items-center border-top gap-1 px-2 my-2" id="tbl_action_bar")
             {
-                small(class="flex-grow-1 text-muted"){$"Seleccione los puestos en la cuadrícula"}
-
-                button(class="btn btn-sm rounded-0" type="button" id="btn_add_row" title="Agregar fila"){$"#<@ICON_ADD_ROW> Agregar"}
-                button(class="btn btn-sm rounded-0" type="button" id="btn_del_row" title="Eliminar fila"){$"#<@ICON_REMOVE_ROW> Eliminar"}
+                small(class="flex-grow-1 text-muted"){$"Establece las cantidades aprobadas de los puestos en la cuadrícula"}
             }
             div(class="alert alert-danger rounded-0 mb-1 py-0 d-none" role="alert" id="tbl_alerts"){$""}
             div(class="" id="div_tbl_puestos" style="width:auto; min-width:100%; max-height:55vh; display:flex;")
@@ -143,10 +105,10 @@ module "form.dk"
                     {
                         "edit-tr"
                         {
-                            "edit-th"(type="Text" field="dpuesto" button="true"){$"Puesto"}
+                            "edit-th"(type="NoEditable" field="dpuesto"){$"Puesto"}
                             "edit-th"(type="NoEditable" field="dunidad"){$"Unidad"}
-                            "edit-th"(type="Number" field="cant_solicitada" textalign="center"){$"Cant. Solicitada"}
-                            "edit-th"(type="NoEditable" field="cant_aprobada" textalign="center"){$"Cant. Aprobada"}
+                            "edit-th"(type="NoEditable" field="cant_solicitada" textalign="center"){$"Cant. Solicitada"}
+                            "edit-th"(type="Number" field="cant_aprobada" textalign="center"){$"Cant. Aprobada"}
                             #! if cur_status == @stt_req_aprobada
                             {
                                 #$ "edit-th"(type="NoEditable" field="cant_contratada" textalign="center"){$"Cant. Contratada"}
@@ -155,11 +117,6 @@ module "form.dk"
                         }
                     }
                 }
-            }
-
-            div
-            {
-                "input-key"(id="ik_puesto" "data-key"="sys_pk" "data-search"="codigo" "data-text"="descripcion" "data-source"="#<@URL_BUSCAR_PUESTO>" columns="codigo,descripcion,unidad_org" colcaptions="Código,Descripción,Unidad Organizacional" "control-styles"="#container{display:none !important;}"){$""}
             }
         }
 
