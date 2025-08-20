@@ -2,7 +2,7 @@
 model "rhrs"
 {
     /**
-    RHRS: Recursos humanos, reclutamiento y selección
+    Recursos humanos, reclutamiento y selección
     =======================================================================
     */
 
@@ -28,7 +28,7 @@ model "rhrs"
 		@"codigo" string(32) unique required
 		@"descripcion" string(150) required
 		@"superior" ref:"rh_unidad_org"
-		@"notas" string(4096)
+		@"notas" memo
 		@"link" string(1024)
 	}
     // Puestos de empleados
@@ -37,15 +37,15 @@ model "rhrs"
         @"codigo" string(32) unique required
         @"descripcion" string(150) required
         @"sat_riesgopuesto" string(5)
-        @"perfil" string(4096)
-        @"responsabilidades" string(4096)
-        @"funciones" string(4096)
-        @"beneficios" string(4096)
+        @"perfil" memo
+        @"responsabilidades" memo
+        @"funciones" memo
+        @"beneficios" memo
         @"salariomensualbruto" decimal(16,4)
         @"divisa" string(5)
         @"ref_jefe" ref:"rh_puesto_org"
         @"ref_unidad_org" ref:"rh_unidad_org"
-        @"notas" string(4096)
+        @"notas" memo
         @"escolaridad" ref:"rh_nvl_escolaridad" required
         @"plazas_previstas" int
         @"link" string(1024)
