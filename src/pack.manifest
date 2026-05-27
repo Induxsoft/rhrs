@@ -1,0 +1,6 @@
+{
+	"id":"rhrs",
+	"installable":["rhrs"],
+	"version":"1.0.12",
+	"schema_ver":"1.0.10"
+}
